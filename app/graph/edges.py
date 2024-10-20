@@ -1,22 +1,18 @@
-from typing import Literal
-from pydantic import BaseModel, Field
-from langchain_core.prompts import PromptTemplate
-from langchain_groq import ChatGroq
 from dotenv import load_dotenv
-from app.chains import get_agent_router_chain, get_grade_answer_chain, get_irrelavent_resonse_chain
-from app.graph.graph_state import GraphState
-from langchain_core.messages import AIMessage
+from .chains import get_agent_router_chain, get_grade_answer_chain, get_irrelavent_resonse_chain
+from .graph_state import GraphState
+
 
 # Load the environment variables
 load_dotenv()
 
 def decide_source(state: GraphState) -> str:
     """Decide whether to use vector store or classify as irrelevant."""
-    response = get_agent_router_chain.invoke(
+    response = get_agent_router_chain().invoke(
         {
-            "input": state["input"],
-            "chat_history": state["chat_history"],
-            "summary": state["summary"],
+            "input": state["formatted_query"],
+            # "chat_history": state["chat_history"],
+            # "summary": state["summary"],
         }
     )
 
@@ -30,7 +26,7 @@ def decide_source(state: GraphState) -> str:
 # grade answer edge
 def grade_answer(state: GraphState):
   print("----Grade Answer----")
-  response = get_grade_answer_chain.invoke(
+  response = get_grade_answer_chain().invoke(
       {
           "input": state["input"],
           "answer": state["answer"],
@@ -65,7 +61,7 @@ def decide_to_generate(state: GraphState):
     print("---Decide to Web Search---")
     return "web_search"
   else:
-    print("Decide to Generate")
+    print("---Decide to Generate---")
     return "generate"
 
 

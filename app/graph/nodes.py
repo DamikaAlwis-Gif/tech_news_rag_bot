@@ -1,13 +1,13 @@
 from langchain_community.utilities import GoogleSerperAPIWrapper
-from app.chains import get_doc_grader_chain, get_formulated_query_chain, get_irrelavent_resonse_chain, get_rag_chain, get_synthesize_answer_chain
-from app.doc_func import create_docs_from_search_results
+from .chains import get_doc_grader_chain, get_formulated_query_chain, get_irrelavent_resonse_chain, get_rag_chain, get_synthesize_answer_chain
+from utils.doc_func import create_docs_from_search_results
 from langchain_core.prompts import PromptTemplate
 from langchain_core.messages import HumanMessage, AIMessage, RemoveMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain_google_genai import GoogleGenerativeAI
 from dotenv import load_dotenv
-from app.graph.graph_state import GraphState
-from app.retriver import get_retriever
+from .graph_state import GraphState
+from utils.retriver import get_retriever
 
 
 load_dotenv()
@@ -21,6 +21,9 @@ def formulate_query(state: GraphState):
   input = state["input"]
   summary = state.get("summary", "")
 
+  print("Chat History:", chat_history)
+  print("summary:", summary)
+  
   formatted_query = chain.invoke(
       {
           "chat_history": chat_history,
@@ -28,7 +31,7 @@ def formulate_query(state: GraphState):
           "summary": summary,
       }
   )
-
+  print("Formatted Query:", formatted_query)
   return {"formatted_query": formatted_query,
           "chat_history": [HumanMessage(state["input"])],
           "input": state["input"],
@@ -125,7 +128,7 @@ def grade_documents(state: GraphState):
   fomulated_question = state["formatted_query"]
   for doc in docs:
     doc_txt = doc.page_content
-    output = get_doc_grader_chain.invoke(
+    output = get_doc_grader_chain().invoke(
         {"input": original_question, "document": doc_txt, "formatted_query": fomulated_question})
     if output.binary_score == "yes":
       print("---Grade: Document is relevant---")
@@ -139,10 +142,11 @@ def grade_documents(state: GraphState):
 # node to handle irrelavent question
 def handle_irrelevant(state: GraphState):
   print("---handeling irrelavent question---")
-  respone = get_irrelavent_resonse_chain.invoke(
+  respone = get_irrelavent_resonse_chain().invoke(
       {
           "input": state["input"],
-          "chat_history": state["chat_history"]
+          "chat_history": state["chat_history"],
+          "chat_summary": state["summary"]
       }
   )
 
@@ -175,6 +179,6 @@ def summarize_conversation(state: GraphState):
   summary = chain.invoke(messages)
 
   delete_messages = [RemoveMessage(id=m.id)
-                     for m in state["chat_history"][:-2]]
+                     for m in state["chat_history"][:-4]]
   
   return {"summary": summary, "chat_history": delete_messages}
