@@ -2,3 +2,5 @@
 .env
 /notebooks/chromadb/
 /data/
+*chromadb/
+*__pycache__/
