@@ -8,7 +8,7 @@ from langchain_google_genai import GoogleGenerativeAI
 from dotenv import load_dotenv
 from .graph_state import GraphState
 from utils.retriver import get_retriever
-
+from concurrent.futures import ThreadPoolExecutor
 
 load_dotenv()
 
@@ -32,6 +32,7 @@ def formulate_query(state: GraphState):
       }
   )
   print("Formatted Query:", formatted_query)
+  print("Orginal query:",input )
   return {"formatted_query": formatted_query,
           "chat_history": [HumanMessage(state["input"])],
           "input": state["input"],
@@ -68,25 +69,32 @@ def generate(state: GraphState):
 
   rag_chain = get_rag_chain()
 
-  if len(documents) >= 8:
-    print("---Do multiple LLM calls---")
-    mid = len(documents) // 2
-    response_1 = rag_chain.invoke(
+  # fucntion to call rag chain invoke
+  def call_rag_chain(context):
+    return rag_chain.invoke(
         {
             "input": state["input"],
             "formatted_query": state["formatted_query"],
-            "context": documents[:mid]
-        }
-    )
-    response_2 = rag_chain.invoke(
-        {
-            "input": state["input"],
-            "formatted_query": state["formatted_query"],
-            "context": documents[mid:]
+            "context": context
         }
     )
 
-    combined_response = "\n".join([response_1, response_2])
+  if len(documents) >= 5:
+    print("---Do multiple LLM calls---")
+
+    # devide the docs 
+    mid = len(documents) // 2
+    contexts = [documents[:mid], documents[mid:]]
+    # use thread pool executor to make conccurrent calls
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+      futures = [executor.submit(call_rag_chain, context) for context in contexts]
+
+      # collect results
+      results = [future.result() for future in futures]
+
+
+    combined_response = "\n".join(results)
     synthesize_answer_chain = get_synthesize_answer_chain()
     genaration = synthesize_answer_chain.invoke(
         {
@@ -126,16 +134,23 @@ def grade_documents(state: GraphState):
   docs = state["vector_store_documents"]
   original_question = state["input"]
   fomulated_question = state["formatted_query"]
-  for doc in docs:
+
+  def call_doc_grader_chain(doc):
     doc_txt = doc.page_content
     output = get_doc_grader_chain().invoke(
         {"input": original_question, "document": doc_txt, "formatted_query": fomulated_question})
     if output.binary_score == "yes":
       print("---Grade: Document is relevant---")
-      filterd_docs.append(doc)
+      return doc
     else:
       print("---Grade: Document is not relevant---")
-      continue
+      return None
+ 
+  with ThreadPoolExecutor(max_workers=5) as executor:
+    futures = [executor.submit(call_doc_grader_chain, doc) for doc in docs]
+    filterd_docs = [future.result() for future in futures if future.result()]
+
+  print(f"Total relevent documents : {len(filterd_docs)}")   
   return {"vector_store_documents": filterd_docs}
 
 
