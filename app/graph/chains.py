@@ -54,7 +54,9 @@ def get_rag_chain():
       ]
   )
 
-  llm = ChatGroq(model="llama-3.1-8b-instant", temperature=0.0)
+  # llm = ChatGroq(model="llama-3.1-8b-instant", temperature=0.0)
+  llm = GoogleGenerativeAI(model="gemini-1.5-flash-latest",
+                                 temperature=0,)
 
  
   rag_chain = rag_prompt | llm | StrOutputParser()
@@ -92,7 +94,9 @@ def get_synthesize_answer_chain():
       template=system,
       input_variables=["input", "formatted_query", "responses"]
   )
-  llm = ChatGroq(model="llama-3.1-8b-instant", temperature=0.0)
+  # llm = ChatGroq(model="llama-3.1-8b-instant", temperature=0.0)
+  llm = GoogleGenerativeAI(model="gemini-1.5-flash-latest",
+                                 temperature=0,)
 
   # Create the chain
   chain = prompt | llm | StrOutputParser()
