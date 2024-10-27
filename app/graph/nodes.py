@@ -178,7 +178,6 @@ def summarize_conversation(state: GraphState):
   print("---Summarize Conversation---")
   llm = GoogleGenerativeAI(model="gemini-1.5-flash-latest",
                            temperature=0,
-                           #  google_api_key="AIzaSyDcY186rbEYMmex_jUSbY1zo6yOSiXg7Yk"
                            )
   summary = state.get("summary", "")
   if summary:

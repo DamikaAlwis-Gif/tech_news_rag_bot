@@ -258,7 +258,6 @@ def get_irrelavent_resonse_chain():
   # llm = ChatGroq(model="llama-3.1-8b-instant", temperature=0.0)
   llm = GoogleGenerativeAI(model="gemini-1.5-flash-latest",
                           temperature=0,
-                          #  google_api_key="AIzaSyDcY186rbEYMmex_jUSbY1zo6yOSiXg7Yk"
                           )
   system = """
   You are an AI chatbot that specializes in answering questions related to technology, business, and innovations.
